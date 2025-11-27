@@ -1,0 +1,123 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Max students is a good constant to keep. 
+#define MAX_STUDENTS 100
+#define NAME_LEN 50
+#define DATA_FILE "students_save.csv" // Shorter file name, why not?
+
+// Data structure
+typedef struct {
+    char name[NAME_LEN];
+    int age;
+    float grade;
+} Student;
+
+// Let's just use globals, it's a C console app, keeps things simple.
+Student roster[MAX_STUDENTS];
+int count = 0; // Current number of students
+
+// --- Function Prototypes (Keep these for good practice) ---
+void show_menu();
+void add_student();
+void delete_student();
+void search_students();
+void print_list();
+void show_stats();
+void sort_roster();
+void save_to_file();
+void load_from_file();
+
+// --- Input Cleanup Function (A necessary evil in C) ---
+void clean_input_buffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
+// --- CORE FUNCTIONS ---
+
+// 1. ADD NEW STUDENT (A little less rigorous input check)
+void add_student() {
+    if (count >= MAX_STUDENTS) {
+        printf("\n[Warning] Roster is full! Can't add more than %d students.\n", MAX_STUDENTS);
+        return;
+    }
+
+    Student s;
+    printf("\n--- Adding a Student ---\n");
+
+    // We'll trust the user to type in a decent name for now
+    printf("Name: ");
+    scanf("%49s", s.name);
+    clean_input_buffer(); // Clear buffer after string input
+
+    printf("Age (must be reasonable): ");
+    // Human programmers sometimes forget to check scanf return value
+    scanf("%d", &s.age);
+    clean_input_buffer();
+
+    // Quick check for grades
+    printf("Grade (0.0-5.0): ");
+    scanf("%f", &s.grade);
+    clean_input_buffer();
+
+    if (s.age <= 0 || s.grade < 0.0 || s.grade > 5.0) {
+        printf("[Error] Invalid data detected (age<=0 or grade out of range). Aborting addition.\n");
+        return; // Don't add invalid data
+    }
+    
+    // Add to the main array
+    roster[count++] = s;
+    printf("\n[Success] %s added! We now have %d students.\n", s.name, count);
+}
+
+// 2. DELETE STUDENT BY NAME
+void delete_student() {
+    char name_to_delete[NAME_LEN];
+    printf("\n--- Deleting a Student ---\n");
+    printf("Enter Name of student to kick out: ");
+    scanf("%49s", name_to_delete);
+    clean_input_buffer();
+
+    int found_idx = -1;
+    for (int i = 0; i < count; i++) {
+        if (strcmp(roster[i].name, name_to_delete) == 0) {
+            found_idx = i;
+            break;
+        }
+    }
+
+    if (found_idx != -1) {
+        // Shifting array elements manually. This is where you really feel the "C" in C.
+        for (int i = found_idx; i < count - 1; i++) {
+            roster[i] = roster[i + 1];
+        }
+        count--;
+        printf("\n[Success] Student '%s' has been removed.\n", name_to_delete);
+    } else {
+        printf("\n[Info] Couldn't find '%s'. Check the name and try again.\n", name_to_delete);
+    }
+}
+
+// 3. SEARCH STUDENT (Now we're combining search and print)
+void search_students() {
+    int choice;
+    printf("\n--- Search ---\n");
+    printf("1. By Name\n2. By Age\nEnter search mode: ");
+    scanf("%d", &choice);
+    clean_input_buffer();
+
+    printf("\nSearch Results:\n");
+    int found_count = 0;
+
+    if (choice == 1) {
+        char name_query[NAME_LEN];
+        printf("Enter Name query: ");
+        scanf("%49s", name_query);
+        clean_input_buffer();
+        
+        for (int i = 0; i < count; i++) {
+            // Using strstr for partial match, which is more user-friendly
+            if (strstr(roster[i].name, name_query) != NULL) {
+                printf("
